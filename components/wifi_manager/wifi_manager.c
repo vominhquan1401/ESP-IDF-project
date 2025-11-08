@@ -113,6 +113,8 @@ void wifi_connect_sta(void)
     ESP_ERROR_CHECK(esp_wifi_stop());
     vTaskDelay(pdMS_TO_TICKS(200));
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    
 }
 
 void wifi_start_ap(void)
