@@ -209,7 +209,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                 char pass[65];
                 wifi_nvs_get_sta_credentials(ssid, pass);
                 wifi_manager_update_sta_creds(ssid, pass);
-
                 wifi_connect_sta();
                 ESP_LOGI(TAG, "wifi event handler end");
             }
