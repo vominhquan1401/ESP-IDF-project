@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES wifi_manager nvs_manager wifi_config_portal
+    REQUIRES wifi_manager nvs_manager wifi_config_portal http_client_module
 )

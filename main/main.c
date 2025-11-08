@@ -9,10 +9,44 @@
 #include "esp_err.h"
 #include "esp_event.h"
 #include "wifi_config_portal.h"
+#include "http_client_module.h"
+
 static const char *TAG = "MAIN_APP";
 
 char ssid[32] = "";
 char password[64] = "";
+
+// Task để gửi sensor data định kỳ
+void sensor_task(void *pvParameters)
+{
+    ESP_LOGI(TAG, "Sensor task started");
+    
+    // Đợi WiFi kết nối (tối đa 30 giây)
+    int wait_count = 0;
+    while (wait_count < 30) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        wait_count++;
+        // Giả sử WiFi đã kết nối sau 10 giây (hoặc check status thực tế)
+        if (wait_count >= 10) break;
+    }
+    
+    ESP_LOGI(TAG, "Starting to send sensor data...");
+    
+    while (1) {
+        // Gửi data lên server
+        esp_err_t err = send_sensor_data_to_server();
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG, "✅ Data sent successfully");
+        } else {
+            ESP_LOGE(TAG, "❌ Failed to send data");
+        }
+        
+        // Đợi interval (interval có thể thay đổi từ server)
+        int interval_ms = get_send_interval_ms();
+        ESP_LOGI(TAG, "⏳ Waiting %d ms before next send...", interval_ms);
+        vTaskDelay(pdMS_TO_TICKS(interval_ms));
+    }
+}
 
 void app_main(void)
 {
@@ -20,26 +54,12 @@ void app_main(void)
     ESP_LOGI(TAG, "         ESP32 WiFi + IoT Sensor        ");
     ESP_LOGI(TAG, "========================================");
 
-    // char ssid[33], pass[65];
-    // saved_ap_t ap_list[MAX_AP_COUNT];
-    // nvs_init();
-    // nvs_list_all_namespaces();
-    // nvs_list_keys_in_namespace("nvs.net80211");
+    // Khởi tạo WiFi
     wifi_init();
-    // if (wifi_try_connect_from_nvs())
-    // {
     wifi_connect_sta();
-    // }
-    // vTaskDelay(pdTICKS_TO_MS(100));
-    // wifi_config_portal_start();
-    // wifi_connect_sta();
-    // int count = wifi_nvs_get_all_saved_ap(ap_list, MAX_AP_COUNT);
-    // printf("Đọc được %d AP đã lưu.", count);
-
-    // if (wifi_nvs_get_sta_credentials(ssid, pass) == ESP_OK)
-    //     printf("Wi-Fi mặc định: SSID=%s, PASS=%s", ssid, pass);
-    // 1️⃣ Ghi giá trị int32
-    // nvs_delete_key("nvs.net80211", "sta.apinfo");
-    // nvs_list_keys_in_namespace("nvs.net80211");
+    
     ESP_LOGI(TAG, "System initialized. Running tasks...");
+    
+    // Tạo task gửi sensor data
+    xTaskCreate(sensor_task, "sensor_task", 8192, NULL, 5, NULL);
 }
