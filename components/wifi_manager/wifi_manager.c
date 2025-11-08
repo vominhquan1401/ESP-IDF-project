@@ -7,10 +7,9 @@
 #include "nvs_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "sensor_module.h"
 #include "http_client_module.h"
 #include "wifi_manager.h"
-
+#include "wifi_config_portal.h"
 static const char *TAG = "WiFi_Manager";
 
 #define WIFI_SSID "mewmew"
@@ -22,11 +21,11 @@ static const char *TAG = "WiFi_Manager";
 #define AP_CHANNEL 1
 #define AP_MAX_CONN 4
 
-static int s_retry_num = 0;
-static bool sensor_task_started = false;
-
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+
+bool wifi_from_portal = false;
+int wifi_retry_count = 0;
 
 wifi_config_t wifi_config = {
     .sta = {
@@ -166,19 +165,26 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     {
         esp_wifi_connect();
     }
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
-    {
-        esp_wifi_set_storage(WIFI_STORAGE_FLASH);
-        esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-        // char ssid[33], pass[65];
-        // if (wifi_nvs_get_sta_credentials(ssid, pass) == ESP_OK)
-        //     printf("Wi-Fi mặc định: SSID=%s, PASS=%s \n", ssid, pass);
-    }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
 
+        if (wifi_from_portal)
+        {
+            if (++wifi_retry_count < 3)
+            {
+                ESP_LOGI(TAG, "Retry %d/3...", wifi_retry_count);
+                esp_wifi_connect();
+            }
+            else
+            {
+                ESP_LOGE(TAG, "❌ Kết nối thất bại sau 3 lần. Quay lại AP mode.");
+                wifi_from_portal = false;
+                wifi_retry_count = 0;
+                wifi_config_portal_start();
+            }
+        }
         switch (event->reason)
         {
         case WIFI_REASON_AUTH_FAIL:
@@ -197,16 +203,25 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         }
         esp_wifi_connect();
     }
-    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
-    {
-
-        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI("WIFI", "✅ Nhận được IP: " IPSTR, IP2STR(&event->ip_info.ip));
-    }
 
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-. end");
 }
 
 static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
+    if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP)
+    {
+        ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
+        ESP_LOGI(TAG, "✅ Nhận được IP: " IPSTR, IP2STR(&event->ip_info.ip));
+
+        // Nếu đang trong quá trình config qua portal → chỉ bây giờ mới lưu NVS
+        if (wifi_from_portal)
+        {
+            wifi_from_portal = false;
+            wifi_retry_count = 0;
+            ESP_LOGI(TAG, "💾 Lưu thông tin Wi-Fi vào NVS");
+            esp_wifi_set_storage(WIFI_STORAGE_FLASH);
+            esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+        }
+    }
 }

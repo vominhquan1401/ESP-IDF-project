@@ -7,17 +7,12 @@
 #include "esp_log.h"
 #include "stdio.h"
 #include "esp_err.h"
-// #include "esp_https_ota.h"
-// #include "esp_crt_bundle.h"
-// #include "esp_http_server.h"
 #include "esp_event.h"
 #include "wifi_config_portal.h"
-// #include "ota_manager.h"
 static const char *TAG = "MAIN_APP";
 
 char ssid[32] = "";
 char password[64] = "";
-
 
 void app_main(void)
 {
@@ -27,6 +22,7 @@ void app_main(void)
 
     // char ssid[33], pass[65];
     // saved_ap_t ap_list[MAX_AP_COUNT];
+    // nvs_init();
     // nvs_list_all_namespaces();
     // nvs_list_keys_in_namespace("nvs.net80211");
     wifi_init();
@@ -45,7 +41,5 @@ void app_main(void)
     // 1️⃣ Ghi giá trị int32
     // nvs_delete_key("nvs.net80211", "sta.apinfo");
     // nvs_list_keys_in_namespace("nvs.net80211");
-    // ESP_ERROR_CHECK(esp_event_handler_register(ESP_HTTPS_OTA_EVENT, ESP_EVENT_ANY_ID, &ota_event_handler, NULL));
-
     ESP_LOGI(TAG, "System initialized. Running tasks...");
 }

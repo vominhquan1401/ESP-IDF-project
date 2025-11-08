@@ -6,7 +6,7 @@
     "interface/ftdi/esp32_devkitj_v1.cfg",
     "target/esp32s3.cfg"
   ],
-  "idf.portWin": "COM4",
+  "idf.portWin": "COM14",
   "idf.toolsPathWin": "C:\\Espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32s3"
@@ -30,8 +30,9 @@
     "esp_https_ota.h": "c",
     "wifi_manager.h": "c",
     "freertos.h": "c",
-    "ota_manager.h": "c"
+    "ota_manager.h": "c",
+    "esp_err.h": "c"
   },
   "idf.flashType": "UART",
-  "idf.monitorPort": "COM4"
+  "idf.monitorPort": "COM14"
 }
