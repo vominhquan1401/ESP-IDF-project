@@ -13,7 +13,7 @@
 static const char *TAG = "WiFi_Manager";
 
 #define WIFI_SSID "mewmew"
-#define WIFI_PASSWORD "vominhquan1401"
+#define WIFI_PASSWORD "vominhquan140"
 #define MAX_RETRY 5
 
 #define AP_SSID "ESP32_WiFi_Lab"
@@ -24,8 +24,9 @@ static const char *TAG = "WiFi_Manager";
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 
+int wifi_retry_webserver_count = 0;
+bool check_wifi_after_fail = false;
 bool wifi_from_portal = false;
-int wifi_retry_count = 0;
 
 wifi_config_t wifi_config = {
     .sta = {
@@ -109,6 +110,8 @@ void wifi_connect_sta(void)
     ESP_LOGI(TAG, "     PASS: %s", (char *)wifi_config.sta.password);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    vTaskDelay(pdMS_TO_TICKS(200));
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
@@ -170,21 +173,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
 
-        if (wifi_from_portal)
-        {
-            if (++wifi_retry_count < 3)
-            {
-                ESP_LOGI(TAG, "Retry %d/3...", wifi_retry_count);
-                esp_wifi_connect();
-            }
-            else
-            {
-                ESP_LOGE(TAG, "❌ Kết nối thất bại sau 3 lần. Quay lại AP mode.");
-                wifi_from_portal = false;
-                wifi_retry_count = 0;
-                wifi_config_portal_start();
-            }
-        }
         switch (event->reason)
         {
         case WIFI_REASON_AUTH_FAIL:
@@ -201,9 +189,32 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             ESP_LOGE("WIFI", "❌ Lỗi khác (reason=%d)", event->reason);
             break;
         }
-        esp_wifi_connect();
-    }
 
+        if (++wifi_retry_webserver_count < 5)
+        {
+            ESP_LOGI(TAG, "Retry %d/5...", wifi_retry_webserver_count);
+            esp_wifi_connect();
+        }
+        else
+        {
+            if (wifi_from_portal)
+            {
+                ESP_LOGE(TAG, "❌ Kết nối thất bại sau 5 lần. Quay lại AP mode.");
+                wifi_retry_webserver_count = 0;
+                wifi_config_portal_start();
+            }
+            else
+            {
+                char ssid[33];
+                char pass[65];
+                wifi_nvs_get_sta_credentials(ssid, pass);
+                wifi_manager_update_sta_creds(ssid, pass);
+
+                wifi_connect_sta();
+                ESP_LOGI(TAG, "wifi event handler end");
+            }
+        }
+    }
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-. end");
 }
 
@@ -215,13 +226,9 @@ static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
         ESP_LOGI(TAG, "✅ Nhận được IP: " IPSTR, IP2STR(&event->ip_info.ip));
 
         // Nếu đang trong quá trình config qua portal → chỉ bây giờ mới lưu NVS
-        if (wifi_from_portal)
-        {
-            wifi_from_portal = false;
-            wifi_retry_count = 0;
-            ESP_LOGI(TAG, "💾 Lưu thông tin Wi-Fi vào NVS");
-            esp_wifi_set_storage(WIFI_STORAGE_FLASH);
-            esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-        }
+        wifi_retry_webserver_count = 0;
+        ESP_LOGI(TAG, "💾 Lưu thông tin Wi-Fi vào NVS");
+        esp_wifi_set_storage(WIFI_STORAGE_FLASH);
+        esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     }
 }

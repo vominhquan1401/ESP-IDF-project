@@ -28,10 +28,10 @@ void app_main(void)
     wifi_init();
     // if (wifi_try_connect_from_nvs())
     // {
-    //     wifi_connect_sta();
+    wifi_connect_sta();
     // }
     // vTaskDelay(pdTICKS_TO_MS(100));
-    wifi_config_portal_start();
+    // wifi_config_portal_start();
     // wifi_connect_sta();
     // int count = wifi_nvs_get_all_saved_ap(ap_list, MAX_AP_COUNT);
     // printf("Đọc được %d AP đã lưu.", count);

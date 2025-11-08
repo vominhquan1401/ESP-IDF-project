@@ -73,8 +73,8 @@ static void wifi_switch_task(void *param)
 
     // cập nhật credentials và gọi connect
     wifi_manager_update_sta_creds(ssid, pass);
-    wifi_from_portal = true; // bật cờ
-    wifi_retry_count = 0;
+    wifi_retry_webserver_count = 0;
+    wifi_from_portal = true;
     wifi_connect_sta();
 
     ESP_LOGI(TAG, "✅ Switched to STA, connecting...");
@@ -116,7 +116,7 @@ static esp_err_t setwifi_post(httpd_req_t *req)
         recvd += r;
     }
     buf[recvd] = '\0';
-    
+
     url_decode_inplace(buf); // giờ buf dạng "ssid=...&password=..."
     char ssid[32] = {0}, pass[64] = {0};
     char *p_ssid = strstr(buf, "ssid=");
@@ -161,7 +161,7 @@ esp_err_t wifi_config_portal_start(void)
     // Dừng Wi-Fi hiện tại (nếu có) rồi bật AP
     esp_wifi_stop();
     wifi_start_ap(); // dùng hàm trong wifi_manager
-    
+
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     if (httpd_start(&s_server, &cfg) != ESP_OK)
     {

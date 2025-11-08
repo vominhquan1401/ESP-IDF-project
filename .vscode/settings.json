@@ -31,7 +31,8 @@
     "wifi_manager.h": "c",
     "freertos.h": "c",
     "ota_manager.h": "c",
-    "esp_err.h": "c"
+    "esp_err.h": "c",
+    "esp_wifi_types.h": "c"
   },
   "idf.flashType": "UART",
   "idf.monitorPort": "COM14"

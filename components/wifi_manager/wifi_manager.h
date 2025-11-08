@@ -5,9 +5,8 @@
 extern "C"
 {
 #endif
+    extern int wifi_retry_webserver_count;
     extern bool wifi_from_portal;
-    extern int wifi_retry_count;
-
     void wifi_init(void);
     void wifi_scan(void);
     void wifi_connect_sta(void);
