@@ -1,32 +1,3 @@
-# _Sample project_
+### Giới thiệu
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
-
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
-
-
-
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
-
-## Example folder contents
-
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+Đề tài xây dựng hệ thống quan trắc môi trường sử dụng vi điều khiển **ESP32** làm thiết bị thu thập và truyền dữ liệu. ESP32 đọc dữ liệu từ hai cảm biến, sau đó gửi dữ liệu lên **máy chủ thông qua giao thức HTTPS** để lưu trữ và xử lý. Bên cạnh đó, thiết bị còn tích hợp **webserver cấu hình Wi-Fi**, cho phép người dùng dễ dàng thiết lập thông tin mạng mà không cần lập trình lại firmware. Hệ thống giúp minh họa mô hình IoT cơ bản, bao gồm thu thập dữ liệu, truyền tải bảo mật và cấu hình thiết bị linh hoạt trong môi trường nhúng.
