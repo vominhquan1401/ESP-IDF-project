@@ -13,7 +13,7 @@
 static const char *TAG = "WiFi_Manager";
 
 #define WIFI_SSID "mewmew"
-#define WIFI_PASSWORD "vominhquan140"
+#define WIFI_PASSWORD "vominhquan1401"
 #define MAX_RETRY 5
 
 #define AP_SSID "ESP32_WiFi_Lab"
@@ -113,8 +113,6 @@ void wifi_connect_sta(void)
     ESP_ERROR_CHECK(esp_wifi_stop());
     vTaskDelay(pdMS_TO_TICKS(200));
     ESP_ERROR_CHECK(esp_wifi_start());
-
-    
 }
 
 void wifi_start_ap(void)
@@ -203,6 +201,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             {
                 ESP_LOGE(TAG, "❌ Kết nối thất bại sau 5 lần. Quay lại AP mode.");
                 wifi_retry_webserver_count = 0;
+                wifi_from_portal = false;
                 wifi_config_portal_start();
             }
             else
@@ -212,6 +211,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                 wifi_nvs_get_sta_credentials(ssid, pass);
                 wifi_manager_update_sta_creds(ssid, pass);
                 wifi_connect_sta();
+                wifi_retry_webserver_count = 0;
                 ESP_LOGI(TAG, "wifi event handler end");
             }
         }

@@ -9,7 +9,7 @@
 
 static const char *TAG = "WiFi_Portal";
 static httpd_handle_t s_server = NULL;
-
+bool portal_done = false;
 // ---------------- HTML giao diện ----------------
 static const char *HTML =
     "<!doctype html><html><body>"
@@ -61,9 +61,9 @@ static void wifi_switch_task(void *param)
     char ssid[32] = {0}, pass[64] = {0};
 
     // tách dữ liệu từ chuỗi "ssid pass"
-    sscanf(creds, "%31s %63s", ssid, pass);
+    sscanf(creds, "%31[^|]|%63[^\n]", ssid, pass);
     free(creds);
-
+    printf("wifi_switch_task string ssid : %s and pass: %s \n", ssid, pass);
     ESP_LOGI(TAG, "🟡 Switching from AP → STA...");
     vTaskDelay(pdMS_TO_TICKS(300)); // để HTTP gửi xong response
 
@@ -78,6 +78,7 @@ static void wifi_switch_task(void *param)
     wifi_connect_sta();
 
     ESP_LOGI(TAG, "✅ Switched to STA, connecting...");
+    portal_done = true;
     vTaskDelete(NULL);
 }
 static void stop_httpd_task(void *arg)
@@ -142,7 +143,7 @@ static esp_err_t setwifi_post(httpd_req_t *req)
     xTaskCreate(stop_httpd_task, "stop_httpd_task", 2048, NULL, 5, NULL);
     // truyền credentials vào task riêng
     char *creds = malloc(100);
-    snprintf(creds, 100, "%s %s", ssid, pass);
+    snprintf(creds, 100, "%s|%s", ssid, pass);
     xTaskCreate(wifi_switch_task, "wifi_switch_task", 4096, creds, 5, NULL);
 
     free(buf);
@@ -157,7 +158,7 @@ static esp_err_t favicon_get(httpd_req_t *r)
 esp_err_t wifi_config_portal_start(void)
 {
     ESP_LOGI(TAG, "🌐 Start WiFi config portal");
-
+    portal_done = false;
     // Dừng Wi-Fi hiện tại (nếu có) rồi bật AP
     esp_wifi_stop();
     wifi_start_ap(); // dùng hàm trong wifi_manager
