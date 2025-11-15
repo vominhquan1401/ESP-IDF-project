@@ -12,8 +12,8 @@
 #include "wifi_config_portal.h"
 static const char *TAG = "WiFi_Manager";
 
-#define WIFI_SSID "mewmew"
-#define WIFI_PASSWORD "vominhquan1401"
+#define WIFI_SSID "BK Robotics"
+#define WIFI_PASSWORD "281020235"
 #define MAX_RETRY 5
 
 #define AP_SSID "ESP32_WiFi_Lab"
@@ -21,12 +21,17 @@ static const char *TAG = "WiFi_Manager";
 #define AP_CHANNEL 1
 #define AP_MAX_CONN 4
 
+#define NUMBER_OF_TRY 5
+
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
 static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+
+wifi_status_t wifi_status = WIFI_STATUS_IDLE;
 
 int wifi_retry_webserver_count = 0;
 bool check_wifi_after_fail = false;
 bool wifi_from_portal = false;
+bool wifi_is_scanning = false;
 
 wifi_config_t wifi_config = {
     .sta = {
@@ -55,10 +60,9 @@ void wifi_init(void)
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 }
 
-void wifi_scan(void)
+wifi_ap_record_t *wifi_scan(uint16_t *found_ap_num)
 {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
 
     wifi_scan_config_t scan_config = {
         .ssid = NULL,
@@ -69,6 +73,10 @@ void wifi_scan(void)
         .scan_time.active.min = 100,
         .scan_time.active.max = 300,
     };
+    wifi_is_scanning = true;
+    ESP_ERROR_CHECK(esp_wifi_start());
+    vTaskDelay(pdMS_TO_TICKS(200));
+
 
     ESP_LOGI(TAG, "Starting WiFi scan...");
     ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
@@ -76,6 +84,7 @@ void wifi_scan(void)
     uint16_t ap_count = 0;
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
     ESP_LOGI(TAG, "Number of access points found: %d", ap_count);
+    wifi_is_scanning = false;
 
     wifi_ap_record_t *ap_info = malloc(sizeof(wifi_ap_record_t) * ap_count);
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_count, ap_info));
@@ -86,8 +95,9 @@ void wifi_scan(void)
                  i + 1, (char *)ap_info[i].ssid, ap_info[i].rssi, ap_info[i].primary);
     }
 
-    free(ap_info);
     ESP_LOGI(TAG, "WiFi scan complete.");
+    *found_ap_num = ap_count;
+    return ap_info; // caller phải free()
 }
 
 bool wifi_try_connect_from_nvs(void)
@@ -110,9 +120,10 @@ void wifi_connect_sta(void)
     ESP_LOGI(TAG, "     PASS: %s", (char *)wifi_config.sta.password);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_stop());
-    vTaskDelay(pdMS_TO_TICKS(200));
     ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_connect());
+    wifi_status = WIFI_STATUS_CONNECTING;
+    
 }
 
 void wifi_start_ap(void)
@@ -131,6 +142,7 @@ void wifi_start_ap(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+    wifi_status = WIFI_STATUS_IDLE;
 }
 
 void wifi_start_dual_mode(void)
@@ -162,13 +174,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-.");
-    // ESP_LOGI(TAG, "     SSID: %s", (char *)wifi_config.sta.ssid);
-    // ESP_LOGI(TAG, "     PASS: %s", (char *)wifi_config.sta.password);
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
-    {
-        esp_wifi_connect();
-    }
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED )
     {
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
@@ -190,29 +196,21 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             break;
         }
 
-        if (++wifi_retry_webserver_count < 5)
+        if (++wifi_retry_webserver_count <= NUMBER_OF_TRY)
         {
-            ESP_LOGI(TAG, "Retry %d/5...", wifi_retry_webserver_count);
+            wifi_status = WIFI_STATUS_CONNECTING;
+            ESP_LOGI(TAG, "Retry %d/%d...", wifi_retry_webserver_count, NUMBER_OF_TRY);
             esp_wifi_connect();
         }
         else
         {
+            wifi_status = WIFI_STATUS_DISCONNECTED;
+            wifi_retry_webserver_count = 0;
             if (wifi_from_portal)
             {
                 ESP_LOGE(TAG, "❌ Kết nối thất bại sau 5 lần. Quay lại AP mode.");
-                wifi_retry_webserver_count = 0;
                 wifi_from_portal = false;
                 wifi_config_portal_start();
-            }
-            else
-            {
-                char ssid[33];
-                char pass[65];
-                wifi_nvs_get_sta_credentials(ssid, pass);
-                wifi_manager_update_sta_creds(ssid, pass);
-                wifi_connect_sta();
-                wifi_retry_webserver_count = 0;
-                ESP_LOGI(TAG, "wifi event handler end");
             }
         }
     }
@@ -223,6 +221,7 @@ static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
 {
     if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP)
     {
+        wifi_status = WIFI_STATUS_CONNECTED;
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)data;
         ESP_LOGI(TAG, "✅ Nhận được IP: " IPSTR, IP2STR(&event->ip_info.ip));
 
@@ -232,4 +231,6 @@ static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
         esp_wifi_set_storage(WIFI_STORAGE_FLASH);
         esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     }
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    
 }

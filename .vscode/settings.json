@@ -1,39 +1,40 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.espIdfPathWin": "C:/Espressif/frameworks/esp-idf-v5.2.5/",
-  "idf.pythonInstallPath": "C:\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.espIdfPathWin": "d:\\SYSTEM\\esp\\v5.2.6\\esp-idf",
+  "idf.pythonInstallPath": "d:\\SYSTEM\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
   "idf.openOcdConfigs": [
-    "interface/ftdi/esp32_devkitj_v1.cfg",
-    "target/esp32s3.cfg"
+    "board/esp32c3-ftdi.cfg"
   ],
-  "idf.portWin": "COM4",
-  "idf.toolsPathWin": "C:\\Espressif",
+  "idf.portWin": "COM5",
+  "idf.toolsPathWin": "d:\\SYSTEM\\.espressif",
   "idf.customExtraVars": {
-    "IDF_TARGET": "esp32s3"
+    "IDF_TARGET": "esp32c3"
   },
-  "clangd.path": "C:\\Espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
+  "clangd.path": "d:\\SYSTEM\\.espressif\\tools\\esp-clang\\16.0.1-fe4f10a809\\esp-clang\\bin\\clangd.exe",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=C:\\Espressif\\tools\\xtensa-esp-elf\\esp-13.2.0_20230928\\xtensa-esp-elf\\bin\\xtensa-esp32s3-elf-gcc.exe",
-    "--compile-commands-dir=d:\\HCMUT\\HCMUT_4_1\\Embedded System\\btl\\build"
+    "--query-driver=d:\\SYSTEM\\.espressif\\tools\\riscv32-esp-elf\\esp-13.2.0_20250707\\riscv32-esp-elf\\bin\\riscv32-esp-elf-gcc.exe",
+    "--compile-commands-dir=d:\\Learning\\Temp\\VSCode\\ESP32\\ESP-IDF-project\\build"
   ],
   "files.associations": {
-    "sensor_module.h": "c",
-    "esp_log.h": "c",
-    "nvs.h": "c",
-    "nvs_flash.h": "c",
-    "bitset": "c",
-    "algorithm": "c",
-    "format": "c",
-    "task.h": "c",
-    "nvs_manager.h": "c",
-    "esp_https_ota.h": "c",
+    "dht22_driver.h": "c",
+    "config.h": "c",
     "wifi_manager.h": "c",
-    "freertos.h": "c",
-    "ota_manager.h": "c",
+    "nvs_manager.h": "c",
     "esp_err.h": "c",
-    "esp_wifi_types.h": "c"
+    "freertos.h": "c",
+    "wifi_config_portal.h": "c",
+    "wifi.h": "c",
+    "led_control.h": "c",
+    "gpio.h": "c",
+    "esp_wifi_types.h": "c",
+    "mqtt_client.h": "c",
+    "esp_event.h": "c",
+    "stdio.h": "c",
+    "stdlib.h": "c",
+    "mqtt_module.h": "c",
+    "nvs_flash.h": "c",
+    "esp_transport.h": "c"
   },
-  "idf.flashType": "UART",
-  "idf.monitorPort": "COM4"
+  "idf.flashType": "UART"
 }

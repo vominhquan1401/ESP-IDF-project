@@ -9,7 +9,7 @@
 #include <cJSON.h>
 
 // Local IP (only works on same network)
-#define SERVER_URL "http://10.180.90.126:3000/api/sensor/data"
+#define SERVER_URL "http://10.180.90.207:3000/api/sensor/data"
 // Ngrok public URL - accessible from any network!
 // #define SERVER_URL "https://31abe43dce60.ngrok-free.app/api/sensor/data"
 #define DEVICE_ID "ESP32_Lab6_001"

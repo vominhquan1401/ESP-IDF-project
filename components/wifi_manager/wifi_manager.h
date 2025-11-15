@@ -5,10 +5,20 @@
 extern "C"
 {
 #endif
+
+    typedef enum {
+        WIFI_STATUS_IDLE = 0,
+        WIFI_STATUS_CONNECTING,
+        WIFI_STATUS_CONNECTED,
+        WIFI_STATUS_DISCONNECTED
+    } wifi_status_t;
+
+    extern wifi_status_t wifi_status;
+    
     extern int wifi_retry_webserver_count;
     extern bool wifi_from_portal;
     void wifi_init(void);
-    void wifi_scan(void);
+    wifi_ap_record_t *wifi_scan(uint16_t *found_ap_num);
     void wifi_connect_sta(void);
     void wifi_start_ap(void);
     void wifi_start_dual_mode(void);

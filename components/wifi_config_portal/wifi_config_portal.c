@@ -63,7 +63,6 @@ static void wifi_switch_task(void *param)
     // tách dữ liệu từ chuỗi "ssid pass"
     sscanf(creds, "%31[^|]|%63[^\n]", ssid, pass);
     free(creds);
-    printf("wifi_switch_task string ssid : %s and pass: %s \n", ssid, pass);
     ESP_LOGI(TAG, "🟡 Switching from AP → STA...");
     vTaskDelay(pdMS_TO_TICKS(300)); // để HTTP gửi xong response
 
