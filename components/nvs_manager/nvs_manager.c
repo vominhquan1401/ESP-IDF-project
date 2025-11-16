@@ -452,3 +452,76 @@ esp_err_t nvs_erase_namespace(const char *namespace_name)
     nvs_close(handle);
     return err;
 }
+
+esp_err_t nvs_read_key_value(const char *namespace_name,
+                             const char *key,
+                             nvs_type_t expected_type,
+                             void *out_value,
+                             size_t *inout_length)
+{
+    if (!namespace_name || !key || !out_value || !inout_length)
+        return ESP_ERR_INVALID_ARG;
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(namespace_name, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Không mở được namespace '%s': %s",
+                 namespace_name, esp_err_to_name(err));
+        return err;
+    }
+
+    // ==== Kiểm tra kiểu dữ liệu thật sự của key trong NVS ====
+    nvs_iterator_t it = NULL;
+    err = nvs_entry_find("nvs", namespace_name, expected_type, &it);
+    bool key_found = false;
+
+    while (err == ESP_OK)
+    {
+        nvs_entry_info_t info;
+        nvs_entry_info(it, &info);
+
+        if (strcmp(info.key, key) == 0)
+        {
+            key_found = true;
+            break;
+        }
+
+        err = nvs_entry_next(&it);
+    }
+    nvs_release_iterator(it);
+
+    if (!key_found)
+    {
+        nvs_close(handle);
+        return ESP_ERR_NVS_NOT_FOUND;
+    }
+
+    // ==== Đọc theo kiểu dữ liệu mong muốn ====
+    switch (expected_type)
+    {
+    case NVS_TYPE_I32:
+        if (*inout_length < sizeof(int32_t))
+        {
+            nvs_close(handle);
+            return ESP_ERR_INVALID_SIZE;
+        }
+        err = nvs_get_i32(handle, key, (int32_t *)out_value);
+        break;
+
+    case NVS_TYPE_STR:
+        err = nvs_get_str(handle, key, (char *)out_value, inout_length);
+        break;
+
+    case NVS_TYPE_BLOB:
+        err = nvs_get_blob(handle, key, out_value, inout_length);
+        break;
+
+    default:
+        err = ESP_ERR_NOT_SUPPORTED;
+        break;
+    }
+
+    nvs_close(handle);
+    return err;
+}

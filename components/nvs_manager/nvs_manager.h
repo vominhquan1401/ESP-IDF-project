@@ -94,6 +94,24 @@ extern "C"
      *         - Sau khi xóa, cần gọi `nvs_commit()` để áp dụng thay đổi.
      */
     esp_err_t nvs_erase_namespace(const char *namespace_name);
+
+    /**
+     * @brief Đọc giá trị của một key trong namespace.
+     *
+     * @param namespace_name  Namespace chứa key
+     * @param key             Tên key
+     * @param expected_type   Kiểu dữ liệu mong muốn (I32, STR, BLOB)
+     * @param out_value       Buffer nhận dữ liệu
+     * @param inout_length    IN: size buffer, OUT: size dữ liệu thực
+     *
+     * @return esp_err_t      ESP_OK nếu đọc thành công
+     */
+    esp_err_t nvs_read_key_value(const char *namespace_name,
+                                 const char *key,
+                                 nvs_type_t expected_type,
+                                 void *out_value,
+                                 size_t *inout_length);
+
 #ifdef __cplusplus
 }
 #endif

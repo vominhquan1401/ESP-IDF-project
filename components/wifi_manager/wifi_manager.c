@@ -12,8 +12,8 @@
 #include "wifi_config_portal.h"
 static const char *TAG = "WiFi_Manager";
 
-#define WIFI_SSID "mewmew"
-#define WIFI_PASSWORD "vominhquan1401"
+#define WIFI_SSID "mewm"
+#define WIFI_PASSWORD "12345678"
 #define MAX_RETRY 5
 
 #define AP_SSID "ESP32_WiFi_Lab"
