@@ -19,6 +19,7 @@ extern "C"
     extern bool wifi_from_portal;
     void wifi_init(void);
     wifi_ap_record_t *wifi_scan(uint16_t *found_ap_num);
+    void wifi_disconnect_to_ap(void);
     void wifi_connect_sta(void);
     void wifi_start_ap(void);
     void wifi_start_dual_mode(void);

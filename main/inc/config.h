@@ -27,11 +27,19 @@ extern "C"
 typedef enum {
     WIFI_STATE_LOAD_CONFIG = 0,
     WIFI_STATE_CONNECT_WIFI,
-    WIFI_STATE_CONNECT_SERVER,
+    WIFI_STATE_TIME_SYN,
     WIFI_STATE_WEB_CONFIG,
     WIFI_STATE_CONTROL_WIFI_HANDLER,
     WIFI_STATE_WAITING_TO_BUTTON,
 } WifiSetUpState_t;
+
+
+typedef enum {
+    WIFI_HANDLER_STATE_WATING = 0,
+    WIFI_HANDLER_STATE_NEW_CONFIG,   // vừa nhận cấu hình mới từ MQTT
+    WIFI_HANDLER_STATE_RECONNECT_OLD     // chạy chu kỳ reconnect WiFi cũ
+} WifiHandlerState_t;
+
 
 
 typedef enum {
@@ -50,7 +58,8 @@ typedef enum {
 
 
 typedef enum {
-    DM_STATE_CHECK_MQTT = 0,
+    DM_STATE_INIT_MQTT = 0,
+    DM_STATE_CHECK_MQTT,
     DM_STATE_GET_DATA,
     DM_STATE_PUBLISH,
 } dm_state_t;
@@ -80,7 +89,8 @@ typedef enum {
 */
 //data handle
 #define RAW_WINDOW   10
-#define DEFAULT_MS 15000         // thời gian gửi mặc định
+#define DEFAULT_MS 15000         // thời gian đọc sensor mặc định
+#define LOW_THRESHOLD_MS 4000
 #define PACKET_WINDOW    1
 
 

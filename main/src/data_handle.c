@@ -1,7 +1,7 @@
 // #include "dht20.h"
 // #include "light_sensor.h"
 #include "data_handle.h"
-
+#include "wifi.h"
 /**
  * Global Variables
  */
@@ -9,6 +9,12 @@ QueueHandle_t sensorQueue;
 
 static const char *TAG = "SensorTask";
 volatile uint32_t sample_period_ms = DEFAULT_MS;
+
+
+static char new_ssid[64];
+static char new_pass[64];
+static bool ssid_received = false;
+static bool pass_received = false;
 /**
  * INTERNAL FUNCTIONs
  */
@@ -227,17 +233,107 @@ bool publish_data(sensor_packet_t *pkt)
 
     return success;
 }
+// Handler:
+static void mqtt_rx_handler(const char *topic, const char *data, int len)
+{
+    // printf("MQTT RX | topic: %s | data: %.*s\n", topic, len, data);
+
+    // ----------------------------
+    // 1) Nhận SSID
+    // ----------------------------
+    if (strstr(topic, WIFI_SSID_ID) == topic) {
+        snprintf(new_ssid, sizeof(new_ssid), "%.*s", len, data);
+        ssid_received = true;
+
+        printf("New SSID received: %s\n", new_ssid);
+    }
+
+    // ----------------------------
+    // 2) Nhận PASSWORD
+    // ----------------------------
+    else if (strstr(topic, WIFI_PASSWORD_ID) == topic) {
+        snprintf(new_pass, sizeof(new_pass), "%.*s", len, data);
+        pass_received = true;
+
+        printf("New PASSWORD received: %s\n", new_pass);
+    }
+
+    // ----------------------------
+    // 3) Khi đã nhận đủ SSID + PASS → chuyển đến taskWifiHandler
+    // ----------------------------
+    if (ssid_received && pass_received) {
+        wifi_cmd_t cmd;
+        snprintf(cmd.ssid, sizeof(cmd.ssid), "%s", new_ssid);
+        snprintf(cmd.password, sizeof(cmd.password), "%s", new_pass);
+
+        xQueueSend(wifiCmdQueue, &cmd, 0);
+
+        printf("WIFI CONFIG READY -  sent to wifi handler\n");
+
+        ssid_received = false;
+        pass_received = false;
+    }
+
+    // ----------------------------
+    // 4) Nhận interval → cập nhật sample_period_ms
+    // ----------------------------
+    else if (strstr(topic, SEND_INTERVAL_ID) == topic) {
+        int new_interval = atoi(data);
+
+        // không cho phép quá nhỏ
+        if (new_interval < LOW_THRESHOLD_MS)
+            new_interval = LOW_THRESHOLD_MS;
+
+        sample_period_ms = new_interval;
+
+        printf("Updated sample_period_ms = %ld ms\n", sample_period_ms);
+    }
+}
+
 
 void taskDataManager(void *pvParameters) 
 {
+    // init mqtt:
+    mqtt_client_cfg_t cfg = {
+        .server_type = SERVER_TYPE,
+        .username    = IO_USERNAME,
+        .password    = IO_KEY,
+        .use_ssl     = USE_SSL,
+    };
+    mqtt_client_init(&cfg);
+    mqtt_client_set_callback(mqtt_rx_handler);
+
     /* VARIABLEs */
-    dm_state_t state = DM_STATE_CHECK_MQTT;
+    dm_state_t state = DM_STATE_INIT_MQTT;
     sensor_packet_t pkt;
 
     while (1)
     {
         switch (state)
         {
+            // =====================================================
+            // 0) Connect to MQTT
+            // =====================================================
+            case DM_STATE_INIT_MQTT:
+            {
+                while(wifi_status != WIFI_STATUS_CONNECTED)
+                {
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                }
+                // subscribe:
+                mqtt_client_subscribe(WIFI_SSID_ID,      1);
+                mqtt_client_subscribe(WIFI_PASSWORD_ID,  1);
+                mqtt_client_subscribe(SEND_INTERVAL_ID,  1);
+
+                // start server
+                mqtt_client_start();  
+
+                //switch state
+                ESP_LOGI("MQTT", "INIT");
+                state = DM_STATE_CHECK_MQTT;
+
+
+            }
             // =====================================================
             // 1) Check MQTT còn kết nối không
             // =====================================================
@@ -277,7 +373,7 @@ void taskDataManager(void *pvParameters)
                     xQueueReceive(sensorQueue, &pkt, 0);
                 }
                 // Thành công hoặc thất bại đều quay về CHECK_MQTT
-                vTaskDelay(pdMS_TO_TICKS(5000));
+                vTaskDelay(pdMS_TO_TICKS(DEFAULT_MS / 3));
                 state = DM_STATE_CHECK_MQTT;
                 break;
         }

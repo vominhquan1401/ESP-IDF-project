@@ -113,6 +113,11 @@ bool wifi_try_connect_from_nvs(void)
     return false;
 }
 
+void wifi_disconnect_to_ap(void)
+{
+    esp_wifi_disconnect();
+}
+
 void wifi_connect_sta(void)
 {
     ESP_LOGI(TAG, "Connecting to STA...");

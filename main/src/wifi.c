@@ -5,6 +5,8 @@
 /* STATICS VARIABLEs */
 static const char *TAG = "WIFI_TASK";
 static const char *TAG1 = "WIFI_HANDLER";
+QueueHandle_t wifiCmdQueue;
+
 TaskHandle_t wifiHandlerHandle;
 static bool mock_button_pressed = false;
 
@@ -28,16 +30,14 @@ static bool is_ap_in_scan(const char *ssid, int scan_count, wifi_ap_record_t *sc
     return false;
 }
 
-
-
 // đồng bộ thời gian
 static void initialize_sntp(void)
 {
+
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "pool.ntp.org");
     sntp_init();
 }
-
 static void obtain_time(void)
 {
     initialize_sntp();
@@ -51,6 +51,8 @@ static void obtain_time(void)
     }
     ESP_LOGI(TAG, "SYN successful");
 }
+
+
 
 /* INTERNAL STATE */
 static inline bool wait_button_to_run_web_server(WifiSetUpState_t *state)
@@ -108,7 +110,7 @@ void connect_to_wifi(WifiSetUpState_t *state)
                 vTaskDelay(pdMS_TO_TICKS(500));
                 if(wifi_status == WIFI_STATUS_CONNECTED){
                     ESP_LOGW(TAG, "change to CONNECT SERVER");
-                    *state = WIFI_STATE_CONNECT_SERVER;
+                    *state = WIFI_STATE_TIME_SYN;
                     //free list
                     free(scan_list);
                     return;
@@ -122,7 +124,6 @@ void connect_to_wifi(WifiSetUpState_t *state)
                     free(scan_list);
                     return;
                 }
-                ESP_LOGW(TAG, "change to WEB SERVER");
                 //check button if pressed to change to web
                 if(wait_button_to_run_web_server(state))
                 {
@@ -159,7 +160,7 @@ void web_server_run(WifiSetUpState_t *state)
 
         ESP_LOGI(TAG, "✅ Wi-Fi connected via portal!");
         ESP_LOGW(TAG, "change to CONNECT SERVER");
-        *state = WIFI_STATE_CONNECT_SERVER;
+        *state = WIFI_STATE_TIME_SYN;
     }
     else
     {
@@ -168,13 +169,18 @@ void web_server_run(WifiSetUpState_t *state)
     }
 }
 
-void connect_to_server(WifiSetUpState_t *state)
+void time_syn(WifiSetUpState_t *state)
 {
-    // đồng bộ thời gian
-    obtain_time();
-    // start server
-    mqtt_client_start();
+    // SYN:
+    static bool done = false;
+    if(!done)
+    {
+        obtain_time();
+        done = true;
+    }
+    
     *state = WIFI_STATE_CONTROL_WIFI_HANDLER;
+    
 }
 
 
@@ -182,15 +188,7 @@ void connect_to_server(WifiSetUpState_t *state)
 /* TASKs */
 void vtaskWifiSetup(void *pvParameters) 
 {
-    // init mqtt:
-    mqtt_client_cfg_t cfg = {
-        .server_type = SERVER_TYPE,
-        .username    = IO_USERNAME,
-        .password    = IO_KEY,
-        .use_ssl     = USE_SSL,
-    };
-    mqtt_client_init(&cfg);
-
+    wifiCmdQueue = xQueueCreate(5, sizeof(wifi_cmd_t));
     while(1)
     {
         switch(state)
@@ -210,7 +208,7 @@ void vtaskWifiSetup(void *pvParameters)
             /**
              * Try to connect to WIFI:
              *      - Failed:      Switch to WIFI_STATE_WEB_CONFIG
-             *      - Successful:  Switch to WIFI_STATE_CONNECT_SERVER
+             *      - Successful:  Switch to WIFI_STATE_TIME_SYN
              * Note: 
              *      - Change led_status = LED_STATUS_CONNECTING
              */
@@ -226,11 +224,11 @@ void vtaskWifiSetup(void *pvParameters)
              * Note: 
              *      - Change led_status = LED_STATUS_CONNECTED
              */
-            case WIFI_STATE_CONNECT_SERVER:
+            case WIFI_STATE_TIME_SYN:
             /* MOCK: auto successful*/
-                ESP_LOGI(TAG, "Connect to server");
+                ESP_LOGI(TAG, "Time SYN");
                 led_status = LED_STATUS_CONNECTED;
-                connect_to_server(&state);
+                time_syn(&state);
                 break;
             /**
              * wait user enter SSID & Pass in WEB mode and try to connect:
@@ -281,20 +279,64 @@ void vtaskWifiSetup(void *pvParameters)
 void taskWifiHandler(void *pvParameters) 
 {
     int done = 0;
+    wifi_cmd_t cmd;
+    WifiHandlerState_t state = WIFI_HANDLER_STATE_WATING;
+    WifiSetUpState_t connect_state;
     while(1)
     {   
-        ESP_LOGE(TAG1, "task handle WIFI");
-        vTaskDelay(pdMS_TO_TICKS(15000));
-        if(!done)
+        switch(state)
         {
-            mock_button_pressed = false;
-            done = 1;
+            case WIFI_HANDLER_STATE_WATING:  // connect wifi mới
+            {
+                if (xQueueReceive(wifiCmdQueue, &cmd, portMAX_DELAY)) 
+                {
+                    printf("Changing WiFi to SSID=%s\n", cmd.ssid);
+                    state = WIFI_HANDLER_STATE_NEW_CONFIG;
+                }
+            }
+            break;
+            case WIFI_HANDLER_STATE_NEW_CONFIG:  // connect wifi mới
+            {
+                // đổi wifi và connect lại
+                
+                wifi_manager_update_sta_creds(cmd.ssid, cmd.password);
+                wifi_disconnect_to_ap();
+                //check status
+                while(1)
+                {
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    if(wifi_status == WIFI_STATUS_DISCONNECTED)
+                    {
+                        state = WIFI_HANDLER_STATE_RECONNECT_OLD;
+                        ESP_LOGE(TAG1, "Can't connect to new WIFI");
+                        break;
+                    }
+                    else if(wifi_status == WIFI_STATUS_CONNECTED)
+                    {
+                        ESP_LOGE(TAG1, "Connect to new WIFI");
+                        state = WIFI_HANDLER_STATE_WATING;
+                        break;
+                    }
+                }
+            }
+            break;
+            case WIFI_HANDLER_STATE_RECONNECT_OLD:      // quay lại kiếm các wifi cũ đã có để connect theo chu kì nếu wifi không ổn
+            {
+                if(connect_state != WIFI_STATE_TIME_SYN)
+                {
+                    connect_to_wifi(&connect_state);
+                    vTaskDelay(pdMS_TO_TICKS(5000));
+                }
+                else
+                {
+                    connect_state = WIFI_STATE_CONNECT_WIFI;
+                    state = WIFI_HANDLER_STATE_WATING;
+                }
+                
+            }
+            break;
         }
         
-
-        // new config => try to connect
-        //failed 5 times => change state first task = WIFI_STATE_CONNECT_WIFI
-        // if state = WIFI_STATE_WEB_CONFIG => wait 30 seconds => return task = WIFI_STATE_CONNECT_WIFI
 
     }
 }

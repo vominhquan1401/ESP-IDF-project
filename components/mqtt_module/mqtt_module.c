@@ -1,17 +1,23 @@
 #include "mqtt_module.h"
 
+#define MAX_SUB_TOPICS 10
+
+static const char *sub_topics[MAX_SUB_TOPICS];
+static int sub_topic_count = 0;
 
 static const char *TAG = "MQTT_MODULE";
 static esp_mqtt_client_handle_t s_client = NULL;
 static mqtt_message_cb_t s_msg_cb = NULL;
 bool s_connected = false;
 
+void mqtt_client_resubscribe_all(void);
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t eid, void *edata) {
     esp_mqtt_event_handle_t event = edata;
 
     switch (eid) {
         case MQTT_EVENT_CONNECTED:
             s_connected = true;
+            mqtt_client_resubscribe_all();
             ESP_LOGI(TAG, "MQTT Connected");
             break;
         case MQTT_EVENT_DISCONNECTED:
@@ -68,6 +74,21 @@ int mqtt_client_publish(const char *topic, const char *data, int len, int qos, i
 }
 
 int mqtt_client_subscribe(const char *topic, int qos) {
+    if (sub_topic_count < MAX_SUB_TOPICS) {
+        sub_topics[sub_topic_count++] = topic;
+    }
+
     if (!s_connected) return -1;
+
     return esp_mqtt_client_subscribe(s_client, topic, qos);
 }
+
+void mqtt_client_resubscribe_all(void)
+{
+    for (int i = 0; i < sub_topic_count; i++) {
+        esp_mqtt_client_subscribe(s_client, sub_topics[i], 1);
+        ESP_LOGI(TAG, "Re-Subscribed: %s", sub_topics[i]);
+    }
+}
+
+
