@@ -89,8 +89,8 @@ typedef enum {
 */
 //data handle
 #define RAW_WINDOW   10
-#define DEFAULT_MS 15000         // thời gian đọc sensor mặc định
-#define LOW_THRESHOLD_MS 4000
+#define DEFAULT_MS 30000         // thời gian đọc sensor mặc định
+#define LOW_THRESHOLD_MS 15000
 #define PACKET_WINDOW    1
 
 

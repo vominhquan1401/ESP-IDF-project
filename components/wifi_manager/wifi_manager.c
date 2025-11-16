@@ -28,10 +28,12 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
 
 wifi_status_t wifi_status = WIFI_STATUS_IDLE;
 
+
 int wifi_retry_webserver_count = 0;
 bool check_wifi_after_fail = false;
 bool wifi_from_portal = false;
 bool wifi_is_scanning = false;
+bool disconnect_by_myself = false;
 
 wifi_config_t wifi_config = {
     .sta = {
@@ -181,21 +183,31 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-.");
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED )
     {
+
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
 
         switch (event->reason)
         {
+        case WIFI_REASON_ASSOC_LEAVE:
+        {
+            ESP_LOGW("WIFI", "Tự Ngắt kết nối");
+            wifi_from_portal = false;
+            wifi_status = WIFI_STATUS_DISCONNECTED;
+            wifi_retry_webserver_count = 0;
+            return; // không xử lý
+        }
         case WIFI_REASON_AUTH_FAIL:
             ESP_LOGE("WIFI", "❌ Sai password Wi-Fi");
             break;
         case WIFI_REASON_NO_AP_FOUND:
             ESP_LOGE("WIFI", "❌ Không tìm thấy SSID");
             break;
-        case WIFI_REASON_ASSOC_LEAVE:
+
         case WIFI_REASON_BEACON_TIMEOUT:
             ESP_LOGE("WIFI", "❌ Mất kết nối do timeout hoặc AP không phản hồi");
             break;
+            
         default:
             ESP_LOGE("WIFI", "❌ Lỗi khác (reason=%d)", event->reason);
             break;

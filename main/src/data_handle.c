@@ -330,6 +330,10 @@ void taskDataManager(void *pvParameters)
 
                 //switch state
                 ESP_LOGI("MQTT", "INIT");
+                while(!mqtt_client_is_connected())
+                {
+                    vTaskDelay(pdMS_TO_TICKS(300));
+                }
                 state = DM_STATE_CHECK_MQTT;
 
 
