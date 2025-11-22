@@ -7,7 +7,6 @@
 #include "nvs_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "http_client_module.h"
 #include "wifi_manager.h"
 #include "wifi_config_portal.h"
 static const char *TAG = "WiFi_Manager";
