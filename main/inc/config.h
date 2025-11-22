@@ -12,17 +12,23 @@ extern "C"
 #include "driver/gpio.h"
 #include <ctype.h>
 #include <string.h>
-#include "wifi_manager.h"
-#include "nvs_manager.h"
-#include "mqtt_module.h"
 #include "esp_sntp.h"
 #include <time.h>
 #include "esp_log.h"
 #include "stdio.h"
 #include "esp_err.h"
 #include "esp_event.h"
+
+/* Modules */
+#include "wifi_manager.h"
+#include "nvs_manager.h"
+#include "mqtt_module.h"
 #include "wifi_config_portal.h"
 #include "secrects.h"
+#include "button.h"
+/* Sensors */
+
+
 
 typedef enum {
     WIFI_STATE_LOAD_CONFIG = 0,
@@ -90,7 +96,7 @@ typedef enum {
 //data handle
 #define RAW_WINDOW   10
 #define DEFAULT_MS 30000         // thời gian đọc sensor mặc định
-#define LOW_THRESHOLD_MS 15000
+#define LOW_THRESHOLD_MS 10000
 #define PACKET_WINDOW    1
 
 

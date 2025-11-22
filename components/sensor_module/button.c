@@ -9,7 +9,7 @@ void button_isr_handler(void *arg)
 
     // Nếu trạng thái thay đổi -> start timer debounce
     if (level != btn->last_state) {
-        btn->last_state = level;
+        btn->last_state = level;                    
         esp_timer_stop(btn->timer);
         esp_timer_start_once(btn->timer, btn->debounce_time_us);
     }
@@ -63,6 +63,6 @@ esp_err_t button_init(button_t *btn, gpio_num_t pin, int active_level,
     gpio_install_isr_service(0);
     gpio_isr_handler_add(pin, button_isr_handler, btn);
 
-    ESP_LOGI(TAG, "Button initialized on GPIO %d", pin);
+    // ESP_LOGI(TAG, "Button initialized on GPIO %d", pin);
     return ESP_OK;
 }

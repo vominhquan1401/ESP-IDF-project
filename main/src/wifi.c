@@ -11,7 +11,8 @@ WifiSetUpState_t state = WIFI_STATE_LOAD_CONFIG;
 saved_ap_t ap_list[MAX_AP_COUNT];
 int ap_number = 0;
 TaskHandle_t wifiHandlerHandle;
-static bool mock_button_pressed = false;
+button_t ap_btn;
+static bool server_button_pressed = false;
 bool wifi_handler_created = false;
 
 /* wifi handler */
@@ -26,6 +27,10 @@ LED_status_t led_status = LED_STATUS_DISCONNECTED;
 
 
 /* INTERNAL FUNCTIONs */
+void on_button_pressed(void *arg) {
+    server_button_pressed = true;
+    printf("Button pressed!\n");
+}
 // Kiểm tra AP lưu có trong danh sách scan
 static bool is_ap_in_scan(const char *ssid, int scan_count, wifi_ap_record_t *scan_list)
 {
@@ -66,7 +71,7 @@ static void obtain_time(void)
 /* INTERNAL STATE */
 static inline bool wait_button_to_run_web_server(WifiSetUpState_t *state)
 {
-    if(mock_button_pressed)
+    if(server_button_pressed)
     {
         //suspend task if done check wifi (wifi handler)
         if(wifi_handler_created && done_check)
@@ -74,16 +79,20 @@ static inline bool wait_button_to_run_web_server(WifiSetUpState_t *state)
             //suspend task:
             ESP_LOGW(TAG, "Suspend task WifiHandler\n");
             vTaskSuspend(wifiHandlerHandle);
-            mock_button_pressed = false;
+            server_button_pressed = false;
             *state = WIFI_STATE_WEB_CONFIG;
             return true;
         }
         // iff wifi handler isn't existed => just switch state
         else if(!wifi_handler_created)
         {
-            mock_button_pressed = false;
+            server_button_pressed = false;
             *state = WIFI_STATE_WEB_CONFIG;
             return true;
+        }
+        else if(*state == WIFI_STATE_WEB_CONFIG)
+        {
+            server_button_pressed = false;
         }
 
     }
@@ -114,7 +123,6 @@ void connect_to_wifi(WifiSetUpState_t *state)
     scan_list = wifi_scan(&ap_num);
     vTaskDelay(pdMS_TO_TICKS(2000));
 
-    ESP_LOGW(TAG, "check Wifi Status");
     /* Check what wifi is active  */
     for(int i = 0; i < ap_number; i++)
     {
@@ -126,7 +134,6 @@ void connect_to_wifi(WifiSetUpState_t *state)
             while(1)
             {
                 vTaskDelay(pdMS_TO_TICKS(500));
-                ESP_LOGW(TAG, "check Wifi Status");
 
                 if(wifi_status == WIFI_STATUS_CONNECTED){
                     ESP_LOGW(TAG, "change to TIME SYN");
@@ -142,7 +149,10 @@ void connect_to_wifi(WifiSetUpState_t *state)
                     free(scan_list);
                     return;
                 }
-                    
+                if(wifi_status == WIFI_STATUS_DISCONNECTED)
+                {
+                    break;
+                }    
             }  
         }
         // if can't connect to wifi => change to web
@@ -171,7 +181,8 @@ void web_server_run(WifiSetUpState_t *state)
                 led_status = LED_STATUS_WEBSERVER;
             vTaskDelay(pdMS_TO_TICKS(500));
         }
-
+        //reset button state;
+        server_button_pressed = false;
         ESP_LOGI(TAG, "✅ Wi-Fi connected via portal!");
         ESP_LOGW(TAG, "change to TIME SYN");
         *state = WIFI_STATE_TIME_SYN;
@@ -202,6 +213,15 @@ void time_syn(WifiSetUpState_t *state)
 /* TASKs */
 void vtaskWifiSetup(void *pvParameters) 
 {
+    button_init(
+        &ap_btn,
+        GPIO_NUM_9,     // Chân nút
+        0,              // active_level = 0 → nhấn = LOW
+        20000,          // debounce = 20ms
+        on_button_pressed,
+        NULL
+    );
+
     wifiCmdQueue = xQueueCreate(5, sizeof(wifi_cmd_t));
     while(1)
     {
@@ -298,16 +318,23 @@ void taskWifiHandler(void *pvParameters)
 {
     wifi_cmd_t cmd;
     WifiSetUpState_t connect_state = WIFI_STATE_CONNECT_WIFI;
+    bool is_scanning = false;
     while(1)
     {   
         switch(handler_state)
         {
             case WIFI_HANDLER_STATE_WATING:  // connect wifi mới
             {
-                if (xQueueReceive(wifiCmdQueue, &cmd, portMAX_DELAY)) 
+                led_status = LED_STATUS_CONNECTED;
+                if (xQueueReceive(wifiCmdQueue, &cmd, pdMS_TO_TICKS(500))) 
                 {
                     printf("Changing WiFi to SSID=%s\n", cmd.ssid);
                     handler_state = WIFI_HANDLER_STATE_NEW_CONFIG;
+                }
+                if(wifi_status == WIFI_STATUS_DISCONNECTED)
+                {
+                    handler_state = WIFI_HANDLER_STATE_RECONNECT_OLD;
+                    ESP_LOGE(TAG1, "Disconnected");
                 }
             }
             break;
@@ -318,6 +345,8 @@ void taskWifiHandler(void *pvParameters)
                 wifi_manager_update_sta_creds(cmd.ssid, cmd.password);
                 wifi_disconnect_to_ap();
                 wifi_connect_sta();
+                led_status = LED_STATUS_CONNECTING;
+                
                 //check status
                 while(1)
                 {
@@ -339,19 +368,31 @@ void taskWifiHandler(void *pvParameters)
             break;
             case WIFI_HANDLER_STATE_RECONNECT_OLD:      // quay lại kiếm các wifi cũ đã có để connect theo chu kì nếu wifi không ổn
             {
-                
+                led_status = LED_STATUS_CONNECTING;
                 if(connect_state != WIFI_STATE_TIME_SYN)    // nếu wifi đã được kết nối, thì không cần kết nối nữa
                 {    
+                    // get new list
                     if(!get_new_list){
                         done_check = false;
                         ap_number = wifi_nvs_get_all_saved_ap(ap_list, MAX_AP_COUNT); // get info
                         get_new_list = true;
                     }
-                    connect_to_wifi(&connect_state);
-                    ESP_LOGE(TAG1, "Don't connect to old WIFI");
-                    done_check = true;  // using to notify that wifi checked
-                    vTaskDelay(pdMS_TO_TICKS(5000));
-                    done_check = false;
+
+                    // scan + connect to wifi
+                    if(!is_scanning)
+                    {
+                        connect_to_wifi(&connect_state);
+                        is_scanning = true;
+                    }
+                    // check if wifi disconnect => wait to return web server or scan + connect again
+                    if(wifi_status == WIFI_STATUS_DISCONNECTED)
+                    {
+                        ESP_LOGE(TAG1, "Don't connect to old WIFI");
+                        is_scanning = false;
+                        done_check = true;  // using to notify that wifi checked
+                        vTaskDelay(pdMS_TO_TICKS(3000));
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(500));
                 }
                 else
                 {

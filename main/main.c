@@ -50,7 +50,7 @@ void app_main(void)
     /* INIT */
     // nvs_init();
     wifi_init();
-    // nvs_list_keys_in_namespace("nvs.net80211");
+    nvs_list_keys_in_namespace("nvs.net80211");
 
     // Init NVS
     // nvs_erase_namespace("nvs.net80211");

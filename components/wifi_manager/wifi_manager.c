@@ -77,7 +77,7 @@ wifi_ap_record_t *wifi_scan(uint16_t *found_ap_num)
     };
     wifi_is_scanning = true;
     ESP_ERROR_CHECK(esp_wifi_start());
-    vTaskDelay(pdMS_TO_TICKS(200));
+    // vTaskDelay(pdMS_TO_TICKS(200));
 
 
     ESP_LOGI(TAG, "Starting WiFi scan...");
@@ -183,7 +183,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-.");
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED )
     {
-
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
 

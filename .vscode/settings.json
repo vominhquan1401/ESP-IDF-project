@@ -5,7 +5,7 @@
   "idf.openOcdConfigs": [
     "board/esp32c3-ftdi.cfg"
   ],
-  "idf.portWin": "COM18",
+  "idf.portWin": "COM5",
   "idf.toolsPathWin": "d:\\SYSTEM\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c3"
@@ -36,7 +36,9 @@
     "nvs_flash.h": "c",
     "esp_transport.h": "c",
     "time.h": "c",
-    "esp_log.h": "c"
+    "esp_log.h": "c",
+    "button.h": "c",
+    "esp_timer.h": "c"
   },
   "idf.flashType": "UART"
 }
