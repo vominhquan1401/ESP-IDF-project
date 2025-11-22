@@ -25,9 +25,11 @@ extern "C"
 #include "mqtt_module.h"
 #include "wifi_config_portal.h"
 #include "secrects.h"
-#include "button.h"
-/* Sensors */
 
+/* Sensors */
+#include "dht20.h"
+#include "button.h"
+#include "light_sensor.h"
 
 
 typedef enum {
@@ -104,9 +106,14 @@ typedef enum {
 ========================= SENSOR ===============================
 */
 
-#define LED_GPIO GPIO_NUM_8
+#define LED_GPIO    GPIO_NUM_8
 
 
+#define ACTIVE_LOW  0
+#define ACTIVE_HIGH 1
+#define BUTTON_PIN  GPIO_NUM_0
+#define ACTIVE      ACTIVE_LOW
+#define DEBOUNCE    20000   //(us)
 
 #ifdef __cplusplus
 }

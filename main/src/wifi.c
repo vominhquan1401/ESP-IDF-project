@@ -116,7 +116,7 @@ void connect_to_wifi(WifiSetUpState_t *state)
     wifi_ap_record_t *scan_list = NULL;
     scan_list = wifi_scan(&ap_num);
     vTaskDelay(pdMS_TO_TICKS(2000));
-
+    bool connecting = false;
     /* Check what wifi is active  */
     for (int i = 0; i < ap_number; i++)
     {
@@ -129,7 +129,6 @@ void connect_to_wifi(WifiSetUpState_t *state)
             while (1)
             {
                 vTaskDelay(pdMS_TO_TICKS(500));
-
                 if (wifi_status == WIFI_STATUS_CONNECTED)
                 {
                     ESP_LOGW(TAG, "change to TIME SYN");
@@ -145,8 +144,13 @@ void connect_to_wifi(WifiSetUpState_t *state)
                     free(scan_list);
                     return;
                 }
-                if (wifi_status == WIFI_STATUS_DISCONNECTED)
+                if (wifi_status == WIFI_STATUS_CONNECTING)
                 {
+                    connecting = true;
+                }          
+                if (wifi_status == WIFI_STATUS_DISCONNECTED && connecting)
+                {
+                    connecting = false;
                     break;
                 }
             }
@@ -207,9 +211,9 @@ void vtaskWifiSetup(void *pvParameters)
 {
     button_init(
         &ap_btn,
-        GPIO_NUM_0, // Chân nút
-        0,          // active_level = 0 → nhấn = LOW
-        20000,      // debounce = 20ms
+        BUTTON_PIN, // Chân nút
+        ACTIVE,          // active_level = 0 → nhấn = LOW
+        DEBOUNCE,      // debounce = 20ms
         on_button_pressed,
         NULL);
 
@@ -275,14 +279,14 @@ void vtaskWifiSetup(void *pvParameters)
             // create task
             if (!wifi_handler_created)
             {
-                ESP_LOGW(TAG, "Create a task to handle WIFI\n");
+                ESP_LOGI(TAG, "Create a task to handle WIFI\n");
                 xTaskCreate(taskWifiHandler, "WifiHandler", 4096, NULL, 2, &wifiHandlerHandle);
                 wifi_handler_created = true;
             }
             else
             {
                 // resume task:
-                ESP_LOGW(TAG, "Resume task WifiHandler\n");
+                ESP_LOGI(TAG, "Resume task WifiHandler\n");
                 get_new_list = false;
                 done_check = true;
                 handler_state = WIFI_HANDLER_STATE_WATING;

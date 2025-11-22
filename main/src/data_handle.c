@@ -54,20 +54,6 @@ void print_time_tick(const char *tag)
 // Data Manager
 
 
-
-// ==== PLACEHOLDER SENSOR READ ====
-bool light_sensor_read(float *lux_out) {
-    *lux_out = 123.45f; // test
-    return true;
-}
-
-bool dht20_read(float *temp_out, float *hum_out) {
-    *temp_out = 25.0f;
-    *hum_out  = 60.0f;
-    return true;
-}
-
-
 /**
  * TASKs
  */
@@ -76,8 +62,8 @@ bool dht20_read(float *temp_out, float *hum_out) {
 void taskSensorRead(void *pvParameters) 
 {
     /* Inits */
-    // i2c_master_init();
-    // dht20_init();
+    i2c_master_init();
+    dht20_init();
     /* Sensor state */
     sensor_state_t state = SENSOR_STATE_READ_DATA;
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -107,17 +93,17 @@ void taskSensorRead(void *pvParameters)
 
                 float t, h, lux;
                 /* Read DHT20 sensor */
-                if (dht20_read(&t, &h)) {
+                if (dht20_read(&t, &h) == ESP_OK) {
                     temp_raw[raw_index] = t;
                     hum_raw[raw_index] = h;
                 }
                 /* Read Light sensor */
-                if (light_sensor_read(&lux)) {
+                if (light_sensor_read(&lux) == ESP_OK) {
                     lux_raw[raw_index] = lux;
                 }
 
-                // ESP_LOGI(TAG, "sensor values: T(%.2f) H(%.2f) L(%.2f)",
-                //                     temp_raw[raw_index], hum_raw[raw_index], lux_raw[raw_index]);
+                ESP_LOGW(TAG, "sensor values: T(%.2f) H(%.2f) L(%.2f)",
+                                    temp_raw[raw_index], hum_raw[raw_index], lux_raw[raw_index]);
 
                 /* increase index */
                 raw_index++;
@@ -335,7 +321,7 @@ void taskDataManager(void *pvParameters)
                     vTaskDelay(pdMS_TO_TICKS(300));
                 }
                 state = DM_STATE_CHECK_MQTT;
-
+                break;
 
             }
             // =====================================================
