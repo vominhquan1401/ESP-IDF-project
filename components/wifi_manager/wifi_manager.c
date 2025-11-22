@@ -28,7 +28,6 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
 
 wifi_status_t wifi_status = WIFI_STATUS_IDLE;
 
-
 int wifi_retry_webserver_count = 0;
 bool check_wifi_after_fail = false;
 bool wifi_from_portal = false;
@@ -78,7 +77,6 @@ wifi_ap_record_t *wifi_scan(uint16_t *found_ap_num)
     wifi_is_scanning = true;
     ESP_ERROR_CHECK(esp_wifi_start());
     // vTaskDelay(pdMS_TO_TICKS(200));
-
 
     ESP_LOGI(TAG, "Starting WiFi scan...");
     ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
@@ -130,7 +128,6 @@ void wifi_connect_sta(void)
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
     wifi_status = WIFI_STATUS_CONNECTING;
-    
 }
 
 void wifi_start_ap(void)
@@ -181,11 +178,11 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     ESP_LOGI(TAG, "wifi event handler -.-.-.-.-.-.");
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED )
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
+        esp_wifi_set_storage(WIFI_STORAGE_RAM);
         wifi_event_sta_disconnected_t *event = (wifi_event_sta_disconnected_t *)event_data;
         ESP_LOGW("WIFI", "Mất kết nối WiFi, reason=%d", event->reason);
-
         switch (event->reason)
         {
         case WIFI_REASON_ASSOC_LEAVE:
@@ -206,7 +203,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         case WIFI_REASON_BEACON_TIMEOUT:
             ESP_LOGE("WIFI", "❌ Mất kết nối do timeout hoặc AP không phản hồi");
             break;
-            
+
         default:
             ESP_LOGE("WIFI", "❌ Lỗi khác (reason=%d)", event->reason);
             break;
@@ -247,6 +244,4 @@ static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
         esp_wifi_set_storage(WIFI_STORAGE_FLASH);
         esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     }
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    
 }
