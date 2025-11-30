@@ -120,7 +120,7 @@ void connect_to_wifi(WifiSetUpState_t *state)
     /* Check what wifi is active  */
     for (int i = 0; i < ap_number; i++)
     {
-        if (is_ap_in_scan(ap_list->ssid, ap_num, scan_list))
+        if (is_ap_in_scan(ap_list[i].ssid, ap_num, scan_list))
         {
             // if active => update info and connect
             wifi_manager_update_sta_creds(ap_list[i].ssid, ap_list[i].pass);

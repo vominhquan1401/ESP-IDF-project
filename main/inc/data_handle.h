@@ -10,7 +10,7 @@ extern "C"
 /**
  * Define 
  */
-#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+// #define LOG_LOCAL_LEVEL ESP_LOG_INFO
 
 /**
  * Declare

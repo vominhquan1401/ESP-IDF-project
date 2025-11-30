@@ -49,6 +49,7 @@ static void print_ascii_hex_until_nul(const uint8_t *src, size_t max_len)
  * ================================================================ */
 void nvs_init()
 {
+    esp_log_level_set("nvs_manager", ESP_LOG_NONE);
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {

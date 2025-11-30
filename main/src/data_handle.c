@@ -43,13 +43,7 @@ float preprocess_value(float *arr, int n)
 
     return sum / (float)(n - 2);
 }
-void print_time_tick(const char *tag)
-{
-    TickType_t tick = xTaskGetTickCount();
-    uint32_t ms = tick * portTICK_PERIOD_MS;
 
-    ESP_LOGI(tag, "Tick = %lu | Time = %lu ms", (uint32_t)tick, ms);
-}
 
 // Data Manager
 
@@ -89,7 +83,6 @@ void taskSensorRead(void *pvParameters)
             {
                 /* waiting */
                 vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(sample_period_ms / RAW_WINDOW));
-                // print_time_tick("SENSOR");
 
                 float t, h, lux;
                 /* Read DHT20 sensor */
@@ -102,8 +95,8 @@ void taskSensorRead(void *pvParameters)
                     lux_raw[raw_index] = lux;
                 }
 
-                ESP_LOGW(TAG, "sensor values: T(%.2f) H(%.2f) L(%.2f)",
-                                    temp_raw[raw_index], hum_raw[raw_index], lux_raw[raw_index]);
+                // ESP_LOGW(TAG, "sensor values: T(%.2f) H(%.2f) L(%.2f)",
+                //                     temp_raw[raw_index], hum_raw[raw_index], lux_raw[raw_index]);
 
                 /* increase index */
                 raw_index++;

@@ -43,6 +43,8 @@ wifi_config_t wifi_config = {
 
 void wifi_init(void)
 {
+    esp_log_level_set("wifi", ESP_LOG_NONE);
+    esp_log_level_set("wifi_init", ESP_LOG_NONE);
     ESP_LOGI(TAG, "Initializing WiFi...");
     nvs_init();
 

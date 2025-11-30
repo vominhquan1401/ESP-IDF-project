@@ -97,7 +97,7 @@ typedef enum {
 */
 //data handle
 #define RAW_WINDOW   10
-#define DEFAULT_MS 30000         // thời gian đọc sensor mặc định
+#define DEFAULT_MS 15000         // thời gian đọc sensor mặc định
 #define LOW_THRESHOLD_MS 10000
 #define PACKET_WINDOW    1
 
@@ -106,7 +106,7 @@ typedef enum {
 ========================= SENSOR ===============================
 */
 
-#define LED_GPIO    GPIO_NUM_8
+#define LED_GPIO    GPIO_NUM_48
 
 
 #define ACTIVE_LOW  0

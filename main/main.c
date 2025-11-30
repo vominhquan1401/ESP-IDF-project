@@ -46,12 +46,8 @@ void app_main(void)
     TaskHandle_t sensorReadHandle;
     TaskHandle_t dataManagerhandle;
     /* INIT */
-    // nvs_init();
     wifi_init();
-    // nvs_list_keys_in_namespace("nvs.net80211");
 
-    // Init NVS
-    // nvs_erase_namespace("nvs.net80211");
     /* Create Tasks */
     xTaskCreate(vtaskWifiSetup, "WifiSetUp", 8192, NULL, 3, &wifiSetUpHandle);
     xTaskCreate(taskLedControl, "LedControl", 8192, NULL, 1, &ledControlHandle);
@@ -59,3 +55,7 @@ void app_main(void)
     xTaskCreate(taskSensorRead, "taskSensorRead", 4096, NULL, 2, &sensorReadHandle);
     xTaskCreate(taskDataManager, "taskDataManager", 4096, NULL, 2, &dataManagerhandle);
 }
+
+
+
+
